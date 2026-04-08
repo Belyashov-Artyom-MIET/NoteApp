@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Запуск NotesApp (UTF-8)",
+            "request": "launch",
+            "mainClass": "NotesApp",
+            "vmArgs": ["-Dfile.encoding=UTF-8"],
+            "console": "integratedTerminal"
+        }
+    ]
+}
