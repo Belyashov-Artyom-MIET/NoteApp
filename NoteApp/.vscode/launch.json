@@ -3,10 +3,19 @@
     "configurations": [
         {
             "type": "java",
+            "name": "NotesAppGUI",
+            "request": "launch",
+            "mainClass": "NotesAppGUI",
+            "projectName": "NoteApp_d41a4fb6"
+        },
+        {
+            "type": "java",
             "name": "Запуск NotesApp (UTF-8)",
             "request": "launch",
             "mainClass": "NotesApp",
-            "vmArgs": ["-Dfile.encoding=UTF-8"],
+            "vmArgs": [
+                "-Dfile.encoding=UTF-8"
+            ],
             "console": "integratedTerminal"
         }
     ]
