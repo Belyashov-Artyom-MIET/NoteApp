@@ -13,7 +13,8 @@ public class NotesAppGUI {
     private DefaultListModel<String> listModel;
     private JList<String> noteList;
     private JTextArea textArea;
-    private List<String> notes = new ArrayList<>();
+    private JTextField titleField;
+    private List<Note> notes = new ArrayList<>();
     private static final String FILE_NAME = "notes.txt";
 
     public static void main(String[] args) {
@@ -41,6 +42,34 @@ public class NotesAppGUI {
         JScrollPane listScroll = new JScrollPane(noteList);
         listScroll.setPreferredSize(new Dimension(250, 0));
 
+        // === Панель-обёртка с заголовком ===
+        JPanel listPanel = new JPanel(new BorderLayout());
+
+        JLabel listTitle = new JLabel("Список заметок", SwingConstants.CENTER);
+        listTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        listTitle.setForeground(new Color(44, 62, 80));
+        listTitle.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // отступы сверху/снизу
+
+        listPanel.add(listTitle, BorderLayout.NORTH);
+        listPanel.add(listScroll, BorderLayout.CENTER);
+
+        // === Поле для заголовка заметки ===
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+
+        JLabel titleLabel = new JLabel("Заголовок:");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+        titleField = new JTextField();
+        titleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        titleField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
+        titlePanel.add(titleLabel, BorderLayout.WEST);
+        titlePanel.add(titleField, BorderLayout.CENTER);
+
         // === Поле для текста заметки ===
         textArea = new JTextArea();
         textArea.setLineWrap(true);
@@ -64,10 +93,12 @@ public class NotesAppGUI {
         buttonPanel.add(deleteButton);
 
         // === Главная раскладка ===
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listScroll, textScroll);
+        // Передаём listPanel вместо listScroll
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listPanel, textScroll);
         splitPane.setDividerLocation(250);
 
         JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.add(titlePanel, BorderLayout.NORTH);  // Добавили поле заголовка
         mainPanel.add(splitPane, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -78,36 +109,43 @@ public class NotesAppGUI {
     private void refreshListModel() {
         listModel.clear();
         for (int i = 0; i < notes.size(); i++) {
-            listModel.addElement((i + 1) + ". " + shortenText(notes.get(i)));
+            String title = notes.get(i).getTitle();
+            if (title.trim().isEmpty()) {
+                title = "Без названия";
+            }
+            listModel.addElement((i + 1) + ". " + title);
         }
-    }
-
-    private String shortenText(String text) {
-        if (text.length() > 50) {
-            return text.substring(0, 47) + "...";
-        }
-        return text;
     }
 
     private void showSelectedNote() {
         int index = noteList.getSelectedIndex();
         if (index >= 0) {
-            textArea.setText(notes.get(index));
+            Note note = notes.get(index);
+            titleField.setText(note.getTitle());
+            textArea.setText(note.getContent());
         }
     }
 
     private void createNewNote() {
-        notes.add("");
+        notes.add(new Note("", ""));
         refreshListModel();
         noteList.setSelectedIndex(notes.size() - 1);
+        titleField.setText("");
         textArea.setText("");
-        textArea.requestFocus();
+        titleField.requestFocus();
     }
 
     private void saveCurrentNote() {
         int index = noteList.getSelectedIndex();
         if (index >= 0) {
-            notes.set(index, textArea.getText().trim());
+            String title = titleField.getText().trim();
+            String content = textArea.getText().trim();
+            
+            if (title.isEmpty()) {
+                title = "Заметка " + (index + 1);
+            }
+            
+            notes.set(index, new Note(title, content));
             refreshListModel();
             saveNotesToFile();
             JOptionPane.showMessageDialog(frame, "Заметка сохранена!", "Успех", JOptionPane.INFORMATION_MESSAGE);
@@ -134,7 +172,11 @@ public class NotesAppGUI {
     // ====================== Работа с файлом ======================
     private void saveNotesToFile() {
         try {
-            Files.write(Path.of(FILE_NAME), notes, StandardCharsets.UTF_8);
+            List<String> lines = new ArrayList<>();
+            for (Note note : notes) {
+                lines.add(note.toFileString());
+            }
+            Files.write(Path.of(FILE_NAME), lines, StandardCharsets.UTF_8);
         } catch (IOException e) {
             JOptionPane.showMessageDialog(frame, "Ошибка сохранения файла: " + e.getMessage(), 
                 "Ошибка", JOptionPane.ERROR_MESSAGE);
@@ -145,7 +187,10 @@ public class NotesAppGUI {
         try {
             Path path = Path.of(FILE_NAME);
             if (Files.exists(path)) {
-                notes = new ArrayList<>(Files.readAllLines(path, StandardCharsets.UTF_8));
+                List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+                for (String line : lines) {
+                    notes.add(Note.fromFileString(line));
+                }
             }
         } catch (IOException e) {
             System.out.println("Ошибка загрузки: " + e.getMessage());
